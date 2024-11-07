@@ -1,0 +1,34 @@
+blueprint:
+  name: Update Thermostats when one changes
+  description: Update all thermostats when one of them changes its temperature.
+  domain: automation
+  input:
+    thermostats:
+      name: Thermostats
+      description: Liste der Thermostate, die aktualisiert werden sollen.
+      selector:
+        entity:
+          multiple: true
+    temperature_attribute:
+      name: Temperature Attribute
+      description: Der Attributname, der die Temperatur enthält.
+      default: temperature
+
+trigger:
+  - platform: state
+    entity_id: !input thermostats
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: "{{ trigger.entity_id }}"
+        sequence:
+          - repeat:
+              count: "{{ (input.thermostats | length) - 1 }}"
+              sequence:
+                - service: climate.set_temperature
+                  target:
+                    entity_id: "{{ input.thermostats[repeat.index if repeat.index < trigger.index else repeat.index + 1] }}"
+                  data:
+                    temperature: "{{ state_attr(trigger.entity_id, input.temperature_attribute) }}"
